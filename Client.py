@@ -15,35 +15,26 @@ class Client :
         self.send_port = 8081
         self.image_port = 8082
 
-        self.commands_text = f"""╒════════════╤═══════════════════════════════════════════════╕
-│ Commands   │ Usage                                         │
-╞════════════╪═══════════════════════════════════════════════╡
-│ List       │ List images in the server                     │
-├────────────┼───────────────────────────────────────────────┤
-│ Download   │ download <image>.<format> Downloads the image │
-├────────────┼───────────────────────────────────────────────┤
-│ Bye        │ Leaves the server                             │
-╘════════════╧═══════════════════════════════════════════════╛"""
+
 
         print("Client Server...")
         self.host, self.port = self.get_host_port()
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.connect((self.host, self.port))
         resp = self.client.recv(1024).decode()
-        json_msg = json.loads(resp) 
-        print(f'{json_msg["data"]}')
-        self.log_message(f"[+] Successfully connected to {self.host} on port {self.port}")
+        # json_msg = json.loads(resp)
+        # print(f'{json_msg["data"]}')
+        # self.log_message(f"Successfully connected to {self.host} on port {self.port}")
 
 
         while self.running :
-            print(f"The name should not contain spaces use underscores if needed")
             self.name = input(f"Enter Client's name : ").strip().split()
             self.name = '_'.join(self.name)
             self.client.send(self.name.encode())
             resp = self.client.recv(1024).decode()
             resp = self.decode(resp)[0]
             print(resp)
-            if resp == 'Ok' :
+            if resp == 'Ok':
                 break
             else : 
                 print('Please Try Again')
@@ -51,15 +42,9 @@ class Client :
             
         server_name = self.client.recv(1024).decode()
         server_name = self.decode(server_name)[0]
-        self.welcome_text = fr"""
-{server_name}'s Server
---------------------
-|   Connected      |
---------------------"""
-        self.log_message(self.welcome_text)
-        self.log_message(self.commands_text)
 
-        self.log_message(f"\n[+]\ {server_name} has joined the chat")
+
+        self.log_message(f"\n{server_name} has joined the chat")
 
         self.session()
         # else : 
@@ -188,21 +173,25 @@ class Client :
 
     def get_host_port(self) :
         while self.running :
-            host = input(f"Enter the host to connect to : ")
-            port = input(f"Enter the port to connect to : ").strip()
-            try : 
-                ipaddress.ip_address(host)
-            except : 
-                print(f'[-] invalid ipaddress')
-                continue
-
-            if port.isnumeric(): 
-                if (int(port) != self.send_port) and (int(port) != self.image_port):
-                    return host, int(port)
-                else :
-                    print(f'The port {port} is reserved. ')
+            data=input("Enter chat server's IP address and port:")
+            if len(data.split())>1:
+                host, port = data.split()
+                try:
+                    ipaddress.ip_address(host)
+                except:
+                    print(f'Invalid IP Address')
                     continue
-            print(f'enter valid data,\ntry again...')
+
+                if port.isnumeric():
+                    if (int(port) != self.send_port) and (int(port) != self.image_port):
+                        return host, int(port)
+                    else:
+                        print(f'The port {port} is reserved. ')
+                        continue
+                print(f'enter valid data,\ntry again...')
+            else:
+                print(f'Please enter a valid IP address and port!')
+
     def log_message(self, msg) :
         self.messages.append(msg)
         system('cls')

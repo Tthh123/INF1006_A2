@@ -49,10 +49,9 @@ class Server:
     def send_all(self, data, ignore=""):
         for client in self.clients:
             # self.dbg(data.get('name'))
-            if ignore:
-                if client != ignore:
-                    self.clients[client].send((json.dumps(data) + "\0\0\0\0").encode())
-            if client != data['name']:
+            for client in self.clients:
+                if ignore and client == ignore:
+                    continue
                 self.clients[client].send((json.dumps(data) + "\0\0\0\0").encode())
 
 
@@ -123,6 +122,10 @@ class Server:
                     try:
                         json_msg = json.loads(msg)
                         print(json_msg)
+                        if "from_server" in json_msg and json_msg["from_server"]:
+                            # If it's from the server, we don't log it again or broadcast it
+                            continue
+
                     except:
                         print("cannot convert msg to json", msg)
                         continue
@@ -186,7 +189,7 @@ class Server:
             name = conn.recv(1024).decode()
         self.clients[name] = conn
         conn.send((self.name + "\0\0\0\0").encode())
-        self.send_all({"name": self.name, "data": f"[+] {name} has joined the chat\n"})
+        self.send_all({"name": self.name, "data": f" {name} has joined the chat\n"})
 
         while self.running:
             # msg = input(f"\n{self.name} : ")
@@ -202,7 +205,7 @@ class Server:
                 for client in self.clients:
                     self.clients[client].send((json.dumps({"name": self.name, "data": msg}) + "\0\0\0\0").encode())
 
-                self.log_message(f"{self.name} :{msg}")
+                # self.log_message(f"{self.name} :{msg}")
             print(f"\n{self.name} :", end='')
 
     def dbg(self, data):
