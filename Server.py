@@ -62,7 +62,7 @@ class Server:
             json_data = conn.recv(1024).decode()
             if json_data:
                 json_data = json.loads(json_data)
-                self.send_all(json_data)
+                self.send_all("Test"+json_data)
                 self.dbg(json_data)
                 command = json_data['data']
                 self.dbg(command)
@@ -159,7 +159,7 @@ class Server:
                 # self.send_all(json_msg)
                 self.log_message(
                     f"{json_msg['name']}:{json_msg['data']}")
-                # print(f"\n{self.name} :", end='')
+                print(f"\n{self.name} :", end='')
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("127.0.0.1", self.recv_port))
