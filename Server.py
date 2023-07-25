@@ -30,19 +30,16 @@ class Server:
         self.log_message("Waiting for incoming connections...")
         while True:
             conn, addr = self.server.accept()
+            ip, pid = map(str, addr)
+            self.log_message("\nReceived connection from " + ip + ", (" + pid + ")")
+            self.log_message("\nConnection Established. Connected From: "+ip+", ("+pid+")")
 
-            self.log_message(
-                f"==> Connection Established. Connection from {addr[0]}, {addr[1]}")
             conn.send(json.dumps({"name": self.name, "data": "Welcome to the server"}).encode())
 
             threading.Thread(target=self.session, args=(conn,)).start()
             if self.recv_server:
                 threading.Thread(target=self.recv_msg).start()
-            else:
-                conn.send(json.dumps(
-                    {"name": self.name, "data": "You are banned from joining this server", 'ban': True}).encode())
-                self.log_message(
-                    f"Denied {conn.getpeername()[0]}'s Request to join")
+
 
     def get_name(self) -> str:
         while True:
@@ -108,7 +105,7 @@ class Server:
                     return
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(('127.0.0.1', self.img_port))
+        s.bind((self.ip, self.img_port))
         s.listen()
 
         while True:
@@ -125,6 +122,7 @@ class Server:
                 if msg:
                     try:
                         json_msg = json.loads(msg)
+                        print(json_msg)
                     except:
                         print("cannot convert msg to json", msg)
                         continue
@@ -143,7 +141,7 @@ class Server:
                                 f"{json_msg['name']} :{json_msg['data']}")
                             self.log_message(
                                 f"{self.name}:{images}")
-                            print(f"\n{self.name} :", end='')
+                            # self.log_message(f"\n{self.name} :", end='')
                             continue
 
                         elif _command[0] == 'bye':
@@ -158,11 +156,10 @@ class Server:
                 else:
                     continue
 
-                self.send_all(json_msg)
-
+                # self.send_all(json_msg)
                 self.log_message(
                     f"{json_msg['name']}:{json_msg['data']}")
-                print(f"\n{self.name} :", end='')
+                # print(f"\n{self.name} :", end='')
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("127.0.0.1", self.recv_port))
@@ -172,54 +169,6 @@ class Server:
             conn, _ = s.accept()
             threading.Thread(target=recv_fn, args=(conn,)).start()
 
-    def kick_client(self, client):
-        if client in self.clients:
-            self.log_message(msg="")
-            print(
-                f"What is the reason for the kick?. This message will be displayed on the client :",
-                end='')
-            reason = input()
-            self.clients[client].send((json.dumps({"name": self.name, "data": "Kick", "kick": True,
-                                                   'reason': reason if reason else "Nothing Much..."}) + "\0\0\0\0").encode())
-            self.clients[client].close()
-            del self.clients[client]
-            self.send_all({"name": self.name,
-                           "data": f" <{client}> has been kicked from the server by <{self.name}>\n Reason : {reason}"})
-
-    def unban(self, ip):
-        with open('./server-files/config.json', 'r+') as f:
-            data = f.read()
-            json_data = json.loads(data)
-            if ip in json_data['ban']:
-                json_data['ban'].remove(ip)
-                f.seek(0)
-                f.truncate()
-                f.write(json.dumps(json_data))
-                self.log_message(f"{ip} has been UNBANNED")
-
-    def ban(self, client):
-        if client in self.clients:
-            self.clients[client].send((json.dumps({"name": self.name, "ban": True}) + "\0\0\0\0").encode())
-            self.send_all({"name": self.name, "data": f"<{client}> has been banned from the server by {self.name}"},
-                          ignore=client)
-            self.log_message(
-                f"You have Banned <{client}> from the server")
-            ip = self.clients[client].getpeername()[0]
-            self.log_message(
-                f"IP ADDRESS : {ip}has been blocked\n")
-            self.clients[client].close()
-            del self.clients[client]
-
-            with open('./server-files/config.json', 'r+') as f:
-                json_data = json.loads(f.read())
-                self.dbg(json_data)
-                if not ip in json_data['ban']:
-                    json_data['ban'].append(ip)
-                self.dbg(json_data)
-                f.seek(0)
-                f.write(json.dumps(json_data))
-        else:
-            self.log_message("[-] username not found")
 
     def GracExit(self):
         pid = getpid()
@@ -227,7 +176,7 @@ class Server:
 
     def session(self, conn):
         name = conn.recv(1024).decode()
-        print(name)
+        print(name+ " has joined the chat.")
         while self.running:
             if not (name in self.clients):
                 conn.send(("Ok" + "\0\0\0\0").encode())
@@ -235,7 +184,6 @@ class Server:
 
             conn.send(("Error" + "\0\0\0\0").encode())
             name = conn.recv(1024).decode()
-        self.log_message(f"[+] {name} has joined the Server\n")
         self.clients[name] = conn
         conn.send((self.name + "\0\0\0\0").encode())
         self.send_all({"name": self.name, "data": f"[+] {name} has joined the chat\n"})
@@ -244,22 +192,13 @@ class Server:
             # msg = input(f"\n{self.name} : ")
             msg = input(f"\n{self.name} :")
             if msg:
-                _check = msg.strip().split()
-                if _check[0] == 'close':
+                instruction = msg.strip().split()
+                if instruction[0] == 'close':
                     self.send_all({"name": self.name, "data": "Server Closed", 'kill': True})
-                    self.log_message(f"Server Closed...\nExitting...")
-                    for client in self.clients: self.clients[client].close()
+                    print(f"Server Closed...\nExiting...")
+                    for client in self.clients:
+                        self.clients[client].close()
                     self.GracExit()
-                if len(_check) == 2:
-                    if _check[0].lower() == 'kick':
-                        self.kick_client(_check[1])
-                        continue
-                    elif _check[0].lower() == 'ban':
-                        self.ban(_check[1])
-                    elif _check[0].lower() == 'unban':
-                        self.unban(_check[1])
-                    else:
-                        pass
                 for client in self.clients:
                     self.clients[client].send((json.dumps({"name": self.name, "data": msg}) + "\0\0\0\0").encode())
 
@@ -295,25 +234,7 @@ class Server:
                     continue
 
     def log_message(self, msg=""):
-        if msg:
-            self.messages.append(msg)
-            for i in self.messages:
-                if type(i) == type([]):
-                    print(i[0], end='')
-                    print(i[1] , end='\n')
-                    continue
-                print(i , end='\n')
-        else:
-            for i in self.messages:
-                if type(i) == type([]):
-                    print(i[0], end='')
-                    print(i[1] , end='\n')
-                    continue
-
-                print(i , end='\n')
-
-
-
+        print(msg)
 
 if __name__ == '__main__':
     Server()

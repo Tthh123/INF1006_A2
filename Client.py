@@ -24,8 +24,8 @@ class Client :
 ├────────────┼───────────────────────────────────────────────┤
 │ Bye        │ Leaves the server                             │
 ╘════════════╧═══════════════════════════════════════════════╛"""
-        
-        self.log_message(f"[+] Client has started...")
+
+        print("Client Server...")
         self.host, self.port = self.get_host_port()
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.connect((self.host, self.port))
@@ -147,7 +147,7 @@ class Client :
                     self.log_message(f"{json_msg['name']} : {json_msg['data']}")
                     #self.dbg(self.log_message)
 
-                    print(f"\n{self.name} : ",end='')
+                    print(f"\n{self.name} : " , end='')
 
     def fetch_image(self, cmd) :
 
