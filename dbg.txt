@@ -1,0 +1,13 @@
+{'name': 'aadish', 'data': ['download.jpeg', 'lokinew.jpg']}
+{'name': 'aadish', 'data': 'Hi'}
+{"name": "aadish", "data": "File Not Found ", "status": "Err"}
+{'name': 'aadish', 'data': 'File Not Found', 'status': 'Err'}
+{"name": "aadish", "data": "File Found", "status": "Ok"}
+{'name': 'aadish', 'data': 'File Downloaded'}
+adding data
+adding data
+adding data
+adding data
+adding data
+adding data
+complete
