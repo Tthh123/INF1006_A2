@@ -44,7 +44,6 @@ class Server:
                 self.log_message(
                     f"Denied {conn.getpeername()[0]}'s Request to join")
 
-
     def get_name(self) -> str:
         while True:
             name = input("Enter username: ")
@@ -281,7 +280,7 @@ class Server:
             except:
                 self.log_message("Invalid format, please enter it as <IP_Address> <Port_No>.")
                 continue
-            if port.isnumeric() and self.is_valid_ip_address(ip):
+            if port.isnumeric():
                 if (int(port) != self.recv_port) and (int(port) != self.img_port):
                     try:
                         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
