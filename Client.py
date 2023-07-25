@@ -47,8 +47,6 @@ class Client :
         self.log_message(f"\n{server_name} has joined the chat")
 
         self.session()
-        # else : 
-        #     print(f"{self.color.WARNING}{json_msg['data']}{self.color.ENDC}")
 
     def dbg(self, data) :
             with open('./server-files/dbg.txt', 'a') as f :
@@ -144,7 +142,7 @@ class Client :
 
         self.save_img(s)
 
-    def session(self)                               :
+    def session(self):
         self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.send_socket.connect(("127.0.0.1", self.send_port))
         threading.Thread(target=self.recv_msg).start()

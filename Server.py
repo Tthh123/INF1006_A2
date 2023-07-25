@@ -122,9 +122,7 @@ class Server:
                     try:
                         json_msg = json.loads(msg)
                         print(json_msg)
-                        if "from_server" in json_msg and json_msg["from_server"]:
-                            # If it's from the server, we don't log it again or broadcast it
-                            continue
+
 
                     except:
                         print("cannot convert msg to json", msg)
