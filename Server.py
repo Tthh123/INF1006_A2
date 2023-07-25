@@ -15,10 +15,9 @@ class Server:
         self.running = True
         self.img_port = 8082
         self.recv_port = 8081
-        self.color = Tcolors()
         self.recv_server = True
         self.client_commands = {"list", "bye"}
-        self.mod_commands = {"kick", "rename", "ban", "unban", "bye"}
+        self.mod_commands = {"rename", "bye"}
         self.clients: dict = {}
         self.log_message(f'Hello, this is INF1006 Chat server, please enter the listening port:')
         self.ip,self.port = self.get_port()
@@ -31,30 +30,20 @@ class Server:
         self.log_message("Waiting for incoming connections...")
         while True:
             conn, addr = self.server.accept()
-            if not self.is_banned(addr[0]):
-                self.log_message(
-                    f"{self.color.RED}==> {self.color.WARNING}Connection from {self.color.OKGREEN}{addr[0]}{addr[1]}{self.color.ENDC}")
-                conn.send(json.dumps({"name": self.name, "data": "Welcome to the server"}).encode())
 
-                threading.Thread(target=self.session, args=(conn,)).start()
-                if self.recv_server:
-                    threading.Thread(target=self.recv_msg).start()
+            self.log_message(
+                f"==> Connection Established. Connection from {addr[0]}, {addr[1]}")
+            conn.send(json.dumps({"name": self.name, "data": "Welcome to the server"}).encode())
+
+            threading.Thread(target=self.session, args=(conn,)).start()
+            if self.recv_server:
+                threading.Thread(target=self.recv_msg).start()
             else:
                 conn.send(json.dumps(
                     {"name": self.name, "data": "You are banned from joining this server", 'ban': True}).encode())
                 self.log_message(
-                    self.color.RED + f"Denied {self.color.OKGREEN}{conn.getpeername()[0]}'s{self.color.RED} Request to join")
+                    f"Denied {conn.getpeername()[0]}'s Request to join")
 
-    def is_banned(self, ip):
-        with open('./server-files/config.json', 'r') as f:
-            json_data = json.loads(f.read())
-            if ip in json_data['ban']:
-                return True
-            return False
-
-    def is_valid_ip_address(self,ip_address):
-        pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
-        return re.match(pattern, ip_address) is not None
 
     def get_name(self) -> str:
         while True:
@@ -70,10 +59,7 @@ class Server:
             if client != data['name']:
                 self.clients[client].send((json.dumps(data) + "\0\0\0\0").encode())
 
-    def update_livecount(self, count):
-        self.messages[1][1] = str(count) + self.messages[1][1][1:]
-        self.log_message(msg='')
-        self.dbg("updating to " + str(count))
+
 
     def image_server(self):
         def serve(conn):
@@ -151,23 +137,22 @@ class Server:
                             self.dbg(f"listing images")
                             images: list = listdir('./server-files/images')
                             self.log_message(
-                                f"{self.color.HEADER}{self.name} {self.color.OKCYAN}: {self.color.OKGREEN}{images}")
+                                f"{self.name}: {images}")
                             self.send_all({"name": json_msg['name'], "data": json_msg['data']})
                             self.send_all({"name": self.name, "data": images})
                             self.log_message(
-                                f"{self.color.HEADER}{json_msg['name']} {self.color.OKCYAN}: {self.color.OKGREEN}{json_msg['data']}")
+                                f"{json_msg['name']} :{json_msg['data']}")
                             self.log_message(
-                                f"{self.color.HEADER}{self.name} {self.color.OKCYAN}: {self.color.OKGREEN}{images}")
-                            print(f"\n{self.color.OKBLUE}{self.name} : {self.color.OKGREEN}", end='')
+                                f"{self.name}:{images}")
+                            print(f"\n{self.name} :", end='')
                             continue
 
                         elif _command[0] == 'bye':
                             self.clients[json_msg['name']].close()
                             del self.clients[json_msg['name']]
-                            self.update_livecount(len(self.clients) + 1)
                             self.send_all({"name": json_msg['name'], "data": "bye"})
                             self.log_message(
-                                f"{self.color.HEADER}{json_msg['name']} {self.color.OKCYAN}:{self.color.OKGREEN}{json_msg['data']}")
+                                f"{json_msg['name']}:{json_msg['data']}")
                             self.send_all({"name": self.name, "data": f"<{json_msg['name']}> has left the server"})
                             continue
 
@@ -177,8 +162,8 @@ class Server:
                 self.send_all(json_msg)
 
                 self.log_message(
-                    f"{self.color.HEADER}{json_msg['name']}{self.color.OKCYAN} : {self.color.OKGREEN}{json_msg['data']}")
-                print(f"\n{self.color.OKBLUE}{self.name} : {self.color.OKGREEN}", end='')
+                    f"{json_msg['name']}:{json_msg['data']}")
+                print(f"\n{self.name} :", end='')
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("127.0.0.1", self.recv_port))
@@ -192,14 +177,13 @@ class Server:
         if client in self.clients:
             self.log_message(msg="")
             print(
-                f"{self.color.WARNING}What is the reason for the kick?. This message will be displayed on the client : {self.color.RED}",
+                f"What is the reason for the kick?. This message will be displayed on the client :",
                 end='')
             reason = input()
             self.clients[client].send((json.dumps({"name": self.name, "data": "Kick", "kick": True,
                                                    'reason': reason if reason else "Nothing Much..."}) + "\0\0\0\0").encode())
             self.clients[client].close()
             del self.clients[client]
-            self.update_livecount(len(self.clients) + 1)
             self.send_all({"name": self.name,
                            "data": f" <{client}> has been kicked from the server by <{self.name}>\n Reason : {reason}"})
 
@@ -212,7 +196,7 @@ class Server:
                 f.seek(0)
                 f.truncate()
                 f.write(json.dumps(json_data))
-                self.log_message(f"{self.color.OKBLUE} {ip} has been {self.color.OKGREEN} UNBANNED{self.color.ENDC}")
+                self.log_message(f"{ip} has been UNBANNED")
 
     def ban(self, client):
         if client in self.clients:
@@ -220,10 +204,10 @@ class Server:
             self.send_all({"name": self.name, "data": f"<{client}> has been banned from the server by {self.name}"},
                           ignore=client)
             self.log_message(
-                f"{self.color.OKBLUE}You have Banned <{self.color.RED}{client}{self.color.OKBLUE}> from the server")
+                f"You have Banned <{client}> from the server")
             ip = self.clients[client].getpeername()[0]
             self.log_message(
-                f"{self.color.OKBLUE}IP ADDRESS : {self.color.RED}{ip}{self.color.OKBLUE} has been blocked{self.color.ENDC}\n")
+                f"IP ADDRESS : {ip}has been blocked\n")
             self.clients[client].close()
             del self.clients[client]
 
@@ -252,24 +236,19 @@ class Server:
 
             conn.send(("Error" + "\0\0\0\0").encode())
             name = conn.recv(1024).decode()
-        self.log_message(f"{self.color.RED}[+] {self.color.OKGREEN}{name} {self.color.WARNING}has joined the Server\n")
+        self.log_message(f"[+] {name} has joined the Server\n")
         self.clients[name] = conn
-        _count = len(self.clients) + 1
-        self.dbg("updating count while accepting client" + str(_count))
-        self.update_livecount(_count)
-        del _count
         conn.send((self.name + "\0\0\0\0").encode())
         self.send_all({"name": self.name, "data": f"[+] {name} has joined the chat\n"})
 
         while self.running:
             # msg = input(f"\n{self.name} : ")
-            msg = input(f"\n{self.color.OKBLUE}{self.name} : {self.color.OKGREEN}")
-            print(self.color.ENDC, end='')
+            msg = input(f"\n{self.name} :")
             if msg:
                 _check = msg.strip().split()
                 if _check[0] == 'close':
                     self.send_all({"name": self.name, "data": "Server Closed", 'kill': True})
-                    self.log_message(f"{self.color.RED}Server Closed...\nExitting...{self.color.ENDC}")
+                    self.log_message(f"Server Closed...\nExitting...")
                     for client in self.clients: self.clients[client].close()
                     self.GracExit()
                 if len(_check) == 2:
@@ -285,8 +264,8 @@ class Server:
                 for client in self.clients:
                     self.clients[client].send((json.dumps({"name": self.name, "data": msg}) + "\0\0\0\0").encode())
 
-                self.log_message(f"{self.color.RED}{self.name} {self.color.OKCYAN}: {self.color.OKGREEN}{msg}")
-            print(f"\n{self.color.OKBLUE}{self.name} : {self.color.OKGREEN}", end='')
+                self.log_message(f"{self.name} :{msg}")
+            print(f"\n{self.name} :", end='')
 
     def dbg(self, data):
         with open('./server-files/debug.txt', 'a', encoding='utf-8') as f:
@@ -322,41 +301,19 @@ class Server:
             for i in self.messages:
                 if type(i) == type([]):
                     print(i[0], end='')
-                    print(i[1] + self.color.ENDC, end='\n')
+                    print(i[1] , end='\n')
                     continue
-                print(i + self.color.ENDC, end='\n')
+                print(i , end='\n')
         else:
             for i in self.messages:
                 if type(i) == type([]):
                     print(i[0], end='')
-                    print(i[1] + self.color.ENDC, end='\n')
+                    print(i[1] , end='\n')
                     continue
 
-                print(i + self.color.ENDC, end='\n')
+                print(i , end='\n')
 
 
-class Tcolors:
-    def __init__(self):
-        system("")
-        self.HEADER = '\033[95m'
-        self.OKBLUE = '\033[94m'
-        self.OKCYAN = '\033[96m'
-        self.OKGREEN = '\033[92m'
-        self.WARNING = '\033[93m'
-        self.FAIL = '\033[91m'
-        self.RED = "\033[0;31m"
-        self.GREEN = "\033[0;32m"
-        self.BLUE = "\e[0;34m"
-        self.YELLOW = "\033[0;33m"
-        self.ENDC = '\033[0m'
-        self.BOLD = '\033[1m'
-        self.UNDERLINE = '\033[4m'
-
-    def return_text(self, color, text):
-        return color + text + self.ENDC
-
-    def write(self, color, text):
-        print(color + text + self.ENDC)
 
 
 if __name__ == '__main__':
