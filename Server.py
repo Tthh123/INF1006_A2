@@ -121,27 +121,26 @@ class Server:
                 if msg:
                     try:
                         json_msg = json.loads(msg)
-                        print(json_msg)
-
-
+                        # print(json_msg)
                     except:
                         print("cannot convert msg to json", msg)
                         continue
                     _command = json_msg['data'].strip().lower().split()
                     if _command[0].lower() in self.client_commands:
                         if _command[0] == 'list':
-                            self.send_all(json_msg)
+                            # self.send_all(json_msg)
                             self.dbg(f"command found {json_msg['data']}")
                             self.dbg(f"listing images")
                             images: list = listdir('./server-files/images')
-                            self.log_message(
-                                f"{self.name}: {images}")
-                            self.send_all({"name": json_msg['name'], "data": json_msg['data']})
+                            # self.log_message(
+                            #     f"{self.name}: {images}")
+                            # self.send_all({"name": json_msg['name'], "data": json_msg['data']})
                             self.send_all({"name": self.name, "data": images})
                             self.log_message(
                                 f"{json_msg['name']} :{json_msg['data']}")
                             self.log_message(
                                 f"{self.name}:{images}")
+                            print(f"\n{self.name} :", end='')
                             # self.log_message(f"\n{self.name} :", end='')
                             continue
 
@@ -150,16 +149,18 @@ class Server:
                             del self.clients[json_msg['name']]
                             self.send_all({"name": json_msg['name'], "data": "bye"})
                             self.log_message(
-                                f"{json_msg['name']}:{json_msg['data']}")
+                                f"{json_msg['name']} : {json_msg['data']}")
                             self.send_all({"name": self.name, "data": f"<{json_msg['name']}> has left the server"})
+                            print(f"\n{self.name} :", end='')
                             continue
 
                 else:
                     continue
 
                 # self.send_all(json_msg)
-                self.log_message(
-                    f"{json_msg['name']}:{json_msg['data']}")
+                system('cls')
+                self.log_message( 
+                    f"{json_msg['name']} : {json_msg['data']}")
                 print(f"\n{self.name} :", end='')
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -177,7 +178,7 @@ class Server:
 
     def session(self, conn):
         name = conn.recv(1024).decode()
-        print(name+ " has joined the chat.")
+        self.log_message(name + " has joined the chat.")
         while self.running:
             if not (name in self.clients):
                 conn.send(("Ok" + "\0\0\0\0").encode())
@@ -187,7 +188,8 @@ class Server:
             name = conn.recv(1024).decode()
         self.clients[name] = conn
         conn.send((self.name + "\0\0\0\0").encode())
-        self.send_all({"name": self.name, "data": f" {name} has joined the chat\n"})
+        self.send_all({"name": self.name, "data": f"{name} has joined the chat\n"})
+        
 
         while self.running:
             # msg = input(f"\n{self.name} : ")
@@ -203,8 +205,9 @@ class Server:
                 for client in self.clients:
                     self.clients[client].send((json.dumps({"name": self.name, "data": msg}) + "\0\0\0\0").encode())
 
-                # self.log_message(f"{self.name} :{msg}")
-            print(f"\n{self.name} :", end='')
+
+                self.log_message(f"{self.name} : {msg}")
+            # print(f"\n{self.name} :", end='')
 
     def dbg(self, data):
         with open('./server-files/debug.txt', 'a', encoding='utf-8') as f:
@@ -235,7 +238,9 @@ class Server:
                     continue
 
     def log_message(self, msg=""):
-        print(msg)
+        self.messages.append(msg)
+        system('cls')
+        for i in self.messages: print(i)
 
 if __name__ == '__main__':
     Server()

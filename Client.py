@@ -113,19 +113,9 @@ class Client :
                 json_msgs = self.get_json(msg)
                 for json_msg in json_msgs :
                     # check for possible commands 
-                    if json_msg.get("kick") : 
-                        self.log_message(f"\__(0_0)__/ You Have Been Kicked from the Server By <{json_msg.get('name')}>\nReason : {json_msg.get('reason')}")
-                        self.client.close()
-                        self.send_socket.close()
-                        print(f"Exiting...")
-                        self.GracExit()
+                    if self.name in json_msg['data']:
+                        # print(f"\n{self.name} : " , end='')
                         break
-                    elif json_msg.get('ban') : 
-                        self.log_message(f"You have been banned from the server by <{json_msg['name']}>")
-                        self.GracExit()
-                    elif json_msg.get('kill') : 
-                        self.log_message(f"Server closed by <{json_msg['name']}>")
-                        self.GracExit()
                     system('cls')
                     self.log_message(f"{json_msg['name']} : {json_msg['data']}")
                     #self.dbg(self.log_message)
