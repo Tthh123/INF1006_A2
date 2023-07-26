@@ -20,10 +20,6 @@ class Client :
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.connect((self.host, self.port))
         resp = self.client.recv(1024).decode()
-        # json_msg = json.loads(resp)
-        # print(f'{json_msg["data"]}')
-        # self.log_message(f"Successfully connected to {self.host} on port {self.port}")
-
 
         while self.running :
             self.name = input(f"Enter Client's name : ").strip().split()
@@ -37,23 +33,15 @@ class Client :
             else : 
                 print('Please Try Again')
                 continue
-            
+        
         server_name = self.client.recv(1024).decode()
         server_name = self.decode(server_name)[0]
-
-
         self.log_message(f"\n{server_name} has joined the chat")
-
         self.session()
-
-    def dbg(self, data) :
-            with open('./server-files/dbg.txt', 'a') as f :
-                f.write(f"{data}\n")
         
     def save_img(self, s) : 
         resp = s.recv(1024).decode()
         resp = self.decode(resp)[0]
-        self.dbg(resp)
         if resp : 
             json_msg = json.loads(resp)
             if json_msg['status'] == 'Ok' : 
@@ -63,13 +51,11 @@ class Client :
                         data = b''
                         while self.running :
                             cdata = s.recv(1024)
-                            if cdata[-4:] != b'AAAA':
-                                self.dbg('adding data')                            
+                            if cdata[-4:] != b'AAAA':                          
                                 data += cdata
                             else :
                                 f.write(data)
-                                print('Download complete')
-                                self.dbg('complete')
+                                self.log_message('Download complete')
                                 s.close()
                                 break
                 except Exception as e:
@@ -87,8 +73,6 @@ class Client :
         msg = msg.split("\x00\x00\x00\x00")
         return msg
     def get_json(self, msg) : 
-        self.dbg(self.name)
-        self.dbg(msg)
         res = []
         for j in msg : 
             if j :
@@ -104,69 +88,59 @@ class Client :
     def recv_msg(self) :
         while self.running :
             msg = self.client.recv(1024).decode()
-            self.dbg('just received\n' + msg)
             msg = self.decode(msg)
             if msg : 
                 json_msgs = self.get_json(msg)
                 for json_msg in json_msgs :
                     # check for possible commands 
                     if self.name in json_msg['data']:
-                        # print(f"\n{self.name} : " , end='')
-                        # print("I suck")
                         continue
+
                     elif "has joined the chat" in json_msg['data']:
                         system('cls')
                         self.log_message(f"{json_msg['data']}")
                         print(f"\n{self.name} : " , end='')
                         continue
+
                     elif "has left the chat" in json_msg['data']:
                         system('cls')
                         self.log_message(f"{json_msg['data']}")
                         print(f"\n{self.name} : " , end='')
                         continue
+
                     elif json_msg.get('kill') : 
                         self.log_message("Server has been closed")
                         self.GracExit()
+
                     system('cls')
                     self.log_message(f"{json_msg['name']} : {json_msg['data']}")
-                    #self.dbg(self.log_message)
                     print(f"\n{self.name} : " , end='')
 
     def fetch_image(self, cmd) :
-
         s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        s.connect(('127.0.0.1', self.image_port))
-
+        s.connect((self.host, self.image_port))
         s.send(json.dumps({"name" : self.name, "data" : cmd}).encode())
-
 
         self.save_img(s)
 
     def session(self):
         self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.send_socket.connect(("127.0.0.1", self.send_port))
+        self.send_socket.connect((self.host, self.send_port))
         threading.Thread(target=self.recv_msg).start()
         while self.running :
             msg = input(f"\n{self.name} : ")
             print(end='')
             if msg : 
-                #print('sending ', format(json.dumps({"name" : self.name, "data" : msg}).encode()))
                 self.send_socket.send(json.dumps({"name" : self.name, "data" : msg}).encode())
                 data = msg.strip().split()
-                self.dbg(data)
                 if len(data) == 2 : 
                     if data[0].lower() == 'download':
                         self.fetch_image(msg)
                         continue
                 if data[0].lower() == 'bye' : 
-                        self.dbg("entered bye")
                         self.client.close()
                         self.send_socket.close()
                         self.GracExit()
-                    
-
-
-                # self.log_message(f"{self.name} : {msg}")
 
 
     def get_host_port(self) :

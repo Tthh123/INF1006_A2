@@ -63,50 +63,33 @@ class Server:
             json_data = conn.recv(1024).decode()
             if json_data:
                 json_data = json.loads(json_data)
-                # self.send_all("Test"+json_data)
-                self.dbg(json_data)
                 command = json_data['data']
-                self.dbg(command)
                 data = command.strip().split()
 
                 if len(data) == 2:
-                    self.dbg('entered len(data)')
                     filename = data[1]
-                    self.dbg(filename)
 
                     if filename in listdir('./server-files/images'):
-                        self.dbg("file found")
-                        # self.send_all(simplejson.dumps({"name" : self.name, "data" : "File Found"}).encode())
                         conn.send((json.dumps(
                             {"name": self.name, "data": "File Found", "status": "Ok"}) + "\0\0\0\0").encode())
-                        self.dbg('ignoring ' + json_data['name'])
-                        # self.send_all(simplejson.dumps({"name" : self.name, "data" : "File Found"}), ignore=json_data['name'])
 
                         with open(f'./server-files/images/{filename}', 'rb') as f:
-                            self.dbg("reading data")
                             image_data = f.read()
-                            self.dbg("image data sent")
-                            self.dbg(image_data)
                         conn.sendall(image_data)
                         conn.send(b"AAAA")
-                        self.send_all({"name": self.name, "data": "File Downloaded"})
 
                     else:
 
                         conn.send((json.dumps(
                             {"name": self.name, "data": "File Not Found ", "status": "Err"}) + "\0\0\0\0").encode())
-                        self.dbg("filename not found")
-                        # self.send_all({"name" : self.name, "data" : "File Not Found","status" : "Err"})
 
                 else:
-                    self.dbg("syntax err in cmd")
-
                     conn.send(json.dumps(({"name": self.name, "data": "Syntax error in the command",
                                            "status": "Err"}) + "\0\0\0\0").encode())
                     return
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(('127.0.0.1', self.img_port))
+        s.bind((self.ip, self.img_port))
         s.listen()
 
         while True:
@@ -123,28 +106,20 @@ class Server:
                 if msg:
                     try:
                         json_msg = json.loads(msg)
-                        # print(json_msg)
                     except:
                         print("cannot convert msg to json", msg)
                         continue
+
                     _command = json_msg['data'].strip().lower().split()
                     if _command[0].lower() in self.client_commands:
                         if _command[0] == 'list':
-                            # self.send_all(json_msg)
-                            self.dbg(f"command found {json_msg['data']}")
-                            self.dbg(f"listing images")
                             images: list = listdir('./server-files/images')
-                            # self.log_message(
-                            #     f"{self.name}: {images}")
-                            # self.send_all({"name": json_msg['name'], "data": json_msg['data']})
-                            # self.send_all({"name": self.name, "data": images})
                             self.send(self.clients[json_msg['name']], {"name": self.name, "data": images})
                             self.log_message(
                                 f"{json_msg['name']} :{json_msg['data']}")
                             self.log_message(
                                 f"{self.name}:{images}")
                             print(f"\n{self.name} :", end='')
-                            # self.log_message(f"\n{self.name} :", end='')
                             continue
 
                         elif _command[0] == 'bye':
@@ -160,7 +135,6 @@ class Server:
                 else:
                     continue
 
-                # self.send_all(json_msg)
                 system('cls')
                 self.log_message( 
                     f"{json_msg['name']} : {json_msg['data']}")
@@ -168,7 +142,7 @@ class Server:
                 print(f"\n{self.name} :", end='')
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(("127.0.0.1", self.recv_port))
+        s.bind((self.ip, self.recv_port))
         s.listen()
 
         while True:
@@ -194,7 +168,6 @@ class Server:
         self.send_all({"name": self.name, "data": f"{name} has joined the chat"})
 
         while self.running:
-            # msg = input(f"\n{self.name} : ")
             msg = input(f"\n{self.name} : ")
             print(end='')
 
@@ -208,11 +181,6 @@ class Server:
                     self.clients[client].send((json.dumps({"name": self.name, "data": msg}) + "\0\0\0\0").encode())
 
                 self.log_message(f"{self.name} : {msg}")
-            # print(f"\n{self.name} :", end='')
-
-    def dbg(self, data):
-        with open('./server-files/debug.txt', 'a', encoding='utf-8') as f:
-            f.write(f"{data}\n")
 
     def get_port(self) -> int:
         while True:
