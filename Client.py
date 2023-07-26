@@ -15,8 +15,6 @@ class Client :
         self.send_port = 8081
         self.image_port = 8082
 
-
-
         print("Client Server...")
         self.host, self.port = self.get_host_port()
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -96,7 +94,6 @@ class Client :
             if j :
                 try : 
                     json_msg = json.loads(j)
-                    
                     res.append(json_msg)
                     continue
                 except :
@@ -115,11 +112,24 @@ class Client :
                     # check for possible commands 
                     if self.name in json_msg['data']:
                         # print(f"\n{self.name} : " , end='')
-                        break
+                        # print("I suck")
+                        continue
+                    elif "has joined the chat" in json_msg['data']:
+                        system('cls')
+                        self.log_message(f"{json_msg['data']}")
+                        print(f"\n{self.name} : " , end='')
+                        continue
+                    elif "has left the chat" in json_msg['data']:
+                        system('cls')
+                        self.log_message(f"{json_msg['data']}")
+                        print(f"\n{self.name} : " , end='')
+                        continue
+                    elif json_msg.get('kill') : 
+                        self.log_message("Server has been closed")
+                        self.GracExit()
                     system('cls')
                     self.log_message(f"{json_msg['name']} : {json_msg['data']}")
                     #self.dbg(self.log_message)
-
                     print(f"\n{self.name} : " , end='')
 
     def fetch_image(self, cmd) :
@@ -156,7 +166,7 @@ class Client :
                     
 
 
-                self.log_message(f"{self.name} : {msg}")
+                # self.log_message(f"{self.name} : {msg}")
 
 
     def get_host_port(self) :

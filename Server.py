@@ -32,9 +32,9 @@ class Server:
             conn, addr = self.server.accept()
             ip, pid = map(str, addr)
             self.log_message("\nReceived connection from " + ip + ", (" + pid + ")")
-            self.log_message("\nConnection Established. Connected From: "+ip+", ("+pid+")")
+            self.log_message("Connection Established. Connected From: "+ip+", ("+pid+")")
 
-            conn.send(json.dumps({"name": self.name, "data": "Welcome to the server"}).encode())
+            conn.send(json.dumps({"name": self.name, "data": "Welcome to the server" + "\0\0\0\0"}).encode())
 
             threading.Thread(target=self.session, args=(conn,)).start()
             if self.recv_server:
@@ -48,12 +48,14 @@ class Server:
 
     def send_all(self, data, ignore=""):
         for client in self.clients:
-            # self.dbg(data.get('name'))
-            for client in self.clients:
-                if ignore and client == ignore:
-                    continue
-                self.clients[client].send((json.dumps(data) + "\0\0\0\0").encode())
+            if ignore and client == ignore:
+                continue
+            self.clients[client].send((json.dumps(data) + "\0\0\0\0").encode())
 
+    def send(self, client, data):
+        print(data)
+        print(client)
+        client.send((json.dumps(data) + "\0\0\0\0").encode())
 
 
     def image_server(self):
@@ -61,7 +63,7 @@ class Server:
             json_data = conn.recv(1024).decode()
             if json_data:
                 json_data = json.loads(json_data)
-                self.send_all("Test"+json_data)
+                # self.send_all("Test"+json_data)
                 self.dbg(json_data)
                 command = json_data['data']
                 self.dbg(command)
@@ -104,7 +106,7 @@ class Server:
                     return
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind((self.ip, self.img_port))
+        s.bind(('127.0.0.1', self.img_port))
         s.listen()
 
         while True:
@@ -135,7 +137,8 @@ class Server:
                             # self.log_message(
                             #     f"{self.name}: {images}")
                             # self.send_all({"name": json_msg['name'], "data": json_msg['data']})
-                            self.send_all({"name": self.name, "data": images})
+                            # self.send_all({"name": self.name, "data": images})
+                            self.send(self.clients[json_msg['name']], {"name": self.name, "data": images})
                             self.log_message(
                                 f"{json_msg['name']} :{json_msg['data']}")
                             self.log_message(
@@ -149,8 +152,8 @@ class Server:
                             del self.clients[json_msg['name']]
                             self.send_all({"name": json_msg['name'], "data": "bye"})
                             self.log_message(
-                                f"{json_msg['name']} : {json_msg['data']}")
-                            self.send_all({"name": self.name, "data": f"<{json_msg['name']}> has left the server"})
+                                f"{json_msg['name']} : {json_msg['data']}") 
+                            self.send_all({"name": self.name, "data": f"<{json_msg['name']}> has left the chat"})
                             print(f"\n{self.name} :", end='')
                             continue
 
@@ -161,6 +164,7 @@ class Server:
                 system('cls')
                 self.log_message( 
                     f"{json_msg['name']} : {json_msg['data']}")
+                self.send_all({"name": f"{json_msg['name']}", "data": f"{json_msg['data']}"})
                 print(f"\n{self.name} :", end='')
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -183,28 +187,25 @@ class Server:
             if not (name in self.clients):
                 conn.send(("Ok" + "\0\0\0\0").encode())
                 break
-
             conn.send(("Error" + "\0\0\0\0").encode())
             name = conn.recv(1024).decode()
         self.clients[name] = conn
         conn.send((self.name + "\0\0\0\0").encode())
-        self.send_all({"name": self.name, "data": f"{name} has joined the chat\n"})
-        
+        self.send_all({"name": self.name, "data": f"{name} has joined the chat"})
 
         while self.running:
             # msg = input(f"\n{self.name} : ")
-            msg = input(f"\n{self.name} :")
+            msg = input(f"\n{self.name} : ")
+            print(end='')
+
             if msg:
                 instruction = msg.strip().split()
                 if instruction[0] == 'close':
                     self.send_all({"name": self.name, "data": "Server Closed", 'kill': True})
                     print(f"Server Closed...\nExiting...")
-                    for client in self.clients:
-                        self.clients[client].close()
                     self.GracExit()
                 for client in self.clients:
                     self.clients[client].send((json.dumps({"name": self.name, "data": msg}) + "\0\0\0\0").encode())
-
 
                 self.log_message(f"{self.name} : {msg}")
             # print(f"\n{self.name} :", end='')
